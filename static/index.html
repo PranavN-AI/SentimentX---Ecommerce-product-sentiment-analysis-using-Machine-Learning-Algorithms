@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SentimentX - The Sentiment Analysis using Machine Learning</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="./">
+    <span class="mark" aria-hidden="true"><i class="positive"></i><i class="neutral"></i><i class="negative"></i></span>
+    <span class="brand-name">SentimentX</span>
+  </a>
+  <p class="tagline">The Sentiment Analysis using Machine Learning</p>
+  <span class="chip" id="modelChip">Loading model…</span>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Read beyond the rating.</h1>
+      <p class="lede">Drop in a file of product reviews. SentimentX reads each one, places it on a scale from negative to positive, and shows the words behind every verdict.</p>
+      <dl class="facts">
+        <div><dt>Training reviews</dt><dd id="factTrain">—</dd></div>
+        <div><dt>Held-out accuracy</dt><dd id="factAcc">—</dd></div>
+        <div><dt>Sentiment classes</dt><dd>3</dd></div>
+      </dl>
+    </div>
+
+    <div class="upload-card">
+      <p class="upload-title">Analyze a CSV</p>
+      <p class="muted small">Needs a text column named <code>review</code> or <code>text</code>. Add <code>rating</code> (1 to 5) to check agreement with stars.</p>
+      <div class="dropzone" id="drop">
+        <input type="file" id="file" accept=".csv" hidden>
+        <p>Drop your file here</p>
+        <button class="primary" id="pick">Choose file</button>
+      </div>
+      <button class="link" id="sample">or try the sample reviews</button>
+      <p class="status" id="status" role="status"></p>
+    </div>
+  </section>
+
+  <section id="results" hidden>
+    <div class="results-head">
+      <div>
+        <h2>Analysis</h2>
+        <p class="muted" id="subtitle"></p>
+      </div>
+      <div class="export">
+        <button class="primary" id="dl-csv">Download reviews (CSV)</button>
+        <button class="ghost" id="dl-json">Download report (JSON)</button>
+      </div>
+    </div>
+
+    <figure class="spectrum">
+      <div class="spectrum-head">
+        <p>Every review, placed by how positive it reads</p>
+        <p class="muted">Hover a dot to read the review.</p>
+      </div>
+      <svg id="spectrum" viewBox="0 0 960 230" role="img" aria-label="Spectrum of review sentiment"></svg>
+      <figcaption class="axis"><span>Negative</span><span id="meanLabel"></span><span>Positive</span></figcaption>
+    </figure>
+
+    <div class="split" id="split"></div>
+
+    <div class="grid-2">
+      <article class="panel">
+        <h3>Model quality</h3>
+        <div class="kpis" id="kpis"></div>
+        <table class="class-table">
+          <thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
+          <tbody id="perClass"></tbody>
+        </table>
+        <p class="note" id="note"></p>
+      </article>
+      <article class="panel">
+        <h3>Confusion matrix</h3>
+        <p class="muted small">Rows are the true label, columns are what the model predicted.</p>
+        <div id="matrix"></div>
+      </article>
+    </div>
+
+    <article class="panel">
+      <h3>What drives each class</h3>
+      <p class="muted small">Single words with the strongest pull toward each label.</p>
+      <div class="words" id="words"></div>
+    </article>
+
+    <article class="panel">
+      <div class="reviews-head">
+        <h3>Reviews</h3>
+        <div class="tabs" id="tabs">
+          <button class="active" data-f="all">All</button>
+          <button data-f="positive">Positive</button>
+          <button data-f="neutral">Neutral</button>
+          <button data-f="negative">Negative</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Review</th><th>Sentiment</th><th>Confidence</th><th>Stars</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="rowcount" id="rowcount"></p>
+    </article>
+
+    <button class="ghost reset" id="reset">Analyze another file</button>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>SentimentX</span> · The Sentiment Analysis using Machine Learning · TF-IDF (words + characters) with Logistic Regression
+</footer>
+<script src="app.js"></script>
+</body>
+</html>
