@@ -9,7 +9,7 @@ Features:
 - Model quality: accuracy, per-class precision and recall, and a confusion matrix
 - Export: Excel workbook (Summary, Reviews, Top issues, Top words, Model quality), CSV, JSON
 
-## Run it
+## Quick Start 🚀
 
 ```bash
 pip install -r requirements.txt
@@ -17,6 +17,13 @@ uvicorn app:app --reload
 ```
 
 Open http://127.0.0.1:8000. The model is already trained (`artifacts/`). If it's missing, the app trains it on first start.
+
+## Development Status
+
+✅ All core files restored - project fully functional  
+✅ Pre-trained model available (98.72% accuracy)  
+✅ Static assets (HTML, CSS, JS) restored  
+✅ Sample data included for testing
 
 ## Training data
 
@@ -29,6 +36,10 @@ Open http://127.0.0.1:8000. The model is already trained (`artifacts/`). If it's
 Class counts: 142,998 positive, 36,041 negative, 17,260 neutral.
 
 Accuracy on the 15% held-out split: 98.72% (macro F1 0.9741). The model is a Linear SVM (C=0.1) with balanced class weights, wrapped in sigmoid calibration so each prediction has a confidence value.
+
+## Sample Reviews
+
+Upload sample data from `static/sample_reviews.csv` to test the application.
 
 ## Retrain
 
@@ -44,9 +55,17 @@ Training uses 85% of the data and keeps 15% for testing. The metrics are written
 
 1. Each review becomes word features (1 and 2 word phrases) and character features (2 to 5 letter pieces, which handle misspellings).
 2. A calibrated Linear SVM assigns probabilities to the three classes. Confidence is the highest probability, and the score is P(positive) minus P(negative).
-4. Customer issues: keyword rules group the complaints in negative reviews into themes. A review can match more than one theme. Edit `issues.py` to change the themes.
-3. Metrics are computed on the 15% test split, which the model never trained on.
+3. Customer issues: keyword rules group the complaints in negative reviews into themes. A review can match more than one theme. Edit `issues.py` to change the themes.
+4. Metrics are computed on the 15% test split, which the model never trained on.
 
 ## Requirements
 
 `pip install -r requirements.txt` installs FastAPI, scikit-learn, pandas, and openpyxl (for Excel export).
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/model` | GET | Get model metadata and metrics |
+| `/api/analyze` | POST | Analyze uploaded CSV file |
+| `/api/export/xlsx` | POST | Export analysis as Excel workbook |
