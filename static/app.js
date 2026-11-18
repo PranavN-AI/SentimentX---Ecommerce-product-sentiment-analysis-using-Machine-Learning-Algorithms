@@ -135,8 +135,9 @@ async function analyze(file) {
     setNavEnabled(true);
     showView("overview");
     toast(`Analyzed ${analysis.total.toLocaleString()} reviews`);
-  } catch {
-    setStatus("Could not reach the server. Is it running?", true);
+  } catch (err) {
+    console.error("Analysis error:", err);
+    setStatus(`Error: ${err.message || "Could not reach the server. Is it running?"}`, true);
   }
 }
 

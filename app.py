@@ -1,4 +1,5 @@
 import re
+import logging
 from datetime import datetime
 
 from fastapi import Body, FastAPI, File, HTTPException, UploadFile
@@ -8,13 +9,26 @@ from fastapi.staticfiles import StaticFiles
 from exporter import build_workbook
 from model import analyze_csv, ensure_model
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="SentimentX")
-ensure_model()  # loads the model at startup, training it first if needed
+
+# Load model at startup; handle initialization errors gracefully
+try:
+    _ = ensure_model()
+    logger.info("Model loaded successfully at startup")
+except Exception as e:
+    logger.error(f"Failed to load model at startup: {e}")
 
 
 @app.get("/api/model")
 def model_info():
-    return ensure_model()["metrics"]
+    try:
+        return ensure_model()["metrics"]
+    except Exception as e:
+        logger.error(f"Model unavailable: {e}")
+        raise HTTPException(503, "Model not loaded. Please restart the server.")
 
 
 @app.post("/api/analyze")
@@ -25,6 +39,9 @@ async def analyze(file: UploadFile = File(...)):
         return analyze_csv(file.file)
     except ValueError as err:
         raise HTTPException(400, str(err))
+    except Exception as err:
+        logger.error(f"Analysis error: {err}")
+        raise HTTPException(500, f"Analysis failed: {err}")
 
 
 @app.post("/api/export/xlsx")
