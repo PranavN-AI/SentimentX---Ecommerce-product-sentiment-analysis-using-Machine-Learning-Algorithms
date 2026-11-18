@@ -1,9 +1,13 @@
-"""SentimentX serving layer: read a review CSV, score each review, build the statistics."""
+"""SentimentX serving layer: read a review CSV, score each review, find complaint themes, build statistics."""
+import csv
+import io
 from pathlib import Path
 
 import joblib
 import numpy as np
 import pandas as pd
+
+from issues import find_issues
 
 BASE = Path(__file__).parent
 ARTIFACT_DIR = BASE / "artifacts"
@@ -15,14 +19,14 @@ TEXT_NAMES = ["review", "text", "comment", "review_text", "content", "body"]
 LABEL_NAMES = ["sentiment", "label", "class"]
 RATING_NAMES = ["rating", "stars", "score"]
 
-_cache = {}
-
 # Filler words that tell us nothing about sentiment; hidden from the "drivers" list.
 STOPWORDS = {
     "the", "and", "was", "this", "that", "with", "for", "are", "its", "all", "very", "really",
     "quite", "just", "have", "had", "you", "they", "there", "more", "some", "also", "one", "it",
     "is", "at", "of", "to", "my", "a", "i", "in", "on", "be", "as", "so", "do", "does", "would", "will",
 }
+
+_cache = {}
 
 
 def normalize_label(value):
@@ -51,14 +55,24 @@ def stars_to_label(value):
 
 
 def read_reviews(fileobj):
-    df = pd.read_csv(fileobj)
+    raw = fileobj.read()
+    text = raw.decode("utf-8-sig", errors="replace") if isinstance(raw, bytes) else raw
+    rows = list(csv.reader(io.StringIO(text)))
+    if not rows:
+        raise ValueError("The file is empty.")
+    width = len(rows[0])
+    for line_no, row in enumerate(rows[1:], start=2):
+        if row and len(row) != width:
+            raise ValueError(
+                f"Line {line_no} has {len(row)} fields but the header has {width}. "
+                "Put review text that contains commas inside double quotes."
+            )
+    df = pd.read_csv(io.StringIO(text))
     df.columns = [str(c).strip().lower() for c in df.columns]
 
     text_col = next((c for c in TEXT_NAMES if c in df.columns), None)
     if text_col is None:
-        text_col = next(
-            (c for c in df.columns if df[c].dtype == object and c not in LABEL_NAMES), None
-        )
+        text_col = next((c for c in df.columns if df[c].dtype == object and c not in LABEL_NAMES), None)
     if text_col is None:
         raise ValueError("No text column found. Name the column 'review' or 'text'.")
 
@@ -85,6 +99,22 @@ def ensure_model():
     return _cache["bundle"]
 
 
+def _top_words(model, features_names, classes):
+    """Average the per-class weights of the calibrated SVM's cross-validation models."""
+    clf = model.named_steps["clf"]
+    coef = np.mean([c.estimator.coef_ for c in clf.calibrated_classifiers_], axis=0)
+    word_idx = np.array([
+        i for i, n in enumerate(features_names)
+        if n.startswith("words__") and " " not in n and n[7:] not in STOPWORDS and len(n) - 7 >= 3
+    ])
+    top = {}
+    for lab in LABELS:
+        row = coef[list(classes).index(lab)][word_idx]
+        best = word_idx[np.argsort(-row)[:10]]
+        top[lab] = [str(features_names[j]).removeprefix("words__") for j in best]
+    return top
+
+
 def analyze_csv(fileobj):
     bundle = ensure_model()
     model, metrics = bundle["model"], bundle["metrics"]
@@ -104,18 +134,8 @@ def analyze_csv(fileobj):
         for lab in LABELS
     ]
 
-    # Word features only, so the drivers are readable words rather than character fragments.
-    names = model.named_steps["features"].get_feature_names_out()
-    word_idx = np.array([
-        i for i, n in enumerate(names)
-        if n.startswith("words__") and " " not in n and n[7:] not in STOPWORDS and len(n) - 7 >= 3
-    ])
-    coef = model.named_steps["clf"].coef_
-    top_words = {}
-    for lab in LABELS:
-        row = coef[classes.index(lab)][word_idx]
-        best = word_idx[np.argsort(-row)[:10]]
-        top_words[lab] = [str(names[j]).removeprefix("words__") for j in best]
+    features_names = model.named_steps["features"].get_feature_names_out()
+    top_words = _top_words(model, features_names, classes)
 
     labelled = data[data["label"].notna()]
     user_accuracy = (
@@ -125,6 +145,8 @@ def analyze_csv(fileobj):
     star_agreement = (
         round(float((checked["sentiment"] == checked["expected"]).mean()) * 100, 1) if len(checked) else None
     )
+
+    issues = find_issues(data["text"].tolist(), data["sentiment"].tolist(), target="negative")
 
     reviews = [
         {
@@ -147,6 +169,7 @@ def analyze_csv(fileobj):
         "top_words": top_words,
         "user_accuracy": user_accuracy,
         "star_agreement": star_agreement,
+        "issues": issues,
         "metrics": metrics,
         "reviews": reviews,
     }

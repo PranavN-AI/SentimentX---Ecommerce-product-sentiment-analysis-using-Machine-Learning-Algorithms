@@ -1,45 +1,51 @@
 {
-  "dataset": "reviews_large.csv",
-  "total_reviews": 45000,
-  "train_size": 38250,
-  "test_size": 6750,
-  "accuracy": 0.9406,
-  "macro_f1": 0.9406,
+  "dataset": "reviews_clean.csv",
+  "model": "TF-IDF (words + characters) with calibrated Linear SVM (C=0.1)",
+  "total_reviews": 196299,
+  "train_size": 166854,
+  "accuracy": 0.9872,
+  "macro_f1": 0.9741,
+  "test_size": 29445,
   "per_class": {
     "negative": {
-      "precision": 0.9348,
-      "recall": 0.9452,
-      "f1": 0.94,
-      "support": 2246
+      "precision": 0.985,
+      "recall": 0.9852,
+      "f1": 0.9851,
+      "support": 5406
     },
     "neutral": {
-      "precision": 0.9388,
-      "recall": 0.9447,
-      "f1": 0.9418,
-      "support": 2242
+      "precision": 0.9605,
+      "recall": 0.9289,
+      "f1": 0.9444,
+      "support": 2589
     },
     "positive": {
-      "precision": 0.9483,
-      "recall": 0.9319,
-      "f1": 0.94,
-      "support": 2262
+      "precision": 0.9908,
+      "recall": 0.9947,
+      "f1": 0.9927,
+      "support": 21450
     }
   },
   "confusion": [
     [
-      2123,
-      66,
-      57
+      5326,
+      24,
+      56
     ],
     [
-      66,
-      2118,
-      58
+      42,
+      2405,
+      142
     ],
     [
-      82,
-      72,
-      2108
+      39,
+      75,
+      21336
     ]
-  ]
+  ],
+  "class_counts": {
+    "positive": 142998,
+    "negative": 36041,
+    "neutral": 17260
+  }
 }
