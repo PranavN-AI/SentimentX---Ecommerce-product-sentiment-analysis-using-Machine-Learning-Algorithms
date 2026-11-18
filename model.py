@@ -67,7 +67,7 @@ def read_reviews(fileobj):
                 f"Line {line_no} has {len(row)} fields but the header has {width}. "
                 "Put review text that contains commas inside double quotes."
             )
-    df = pd.read_csv(io.StringIO(text))
+    df = pd.DataFrame(rows[1:], columns=rows[0])
     df.columns = [str(c).strip().lower() for c in df.columns]
 
     text_col = next((c for c in TEXT_NAMES if c in df.columns), None)
