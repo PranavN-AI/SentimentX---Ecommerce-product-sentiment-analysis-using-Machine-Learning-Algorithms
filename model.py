@@ -59,13 +59,14 @@ def read_reviews(fileobj):
     text = raw.decode("utf-8-sig", errors="replace") if isinstance(raw, bytes) else raw
 
     # Attempt strict CSV parsing first (handles quoted newlines correctly)
+    rows = None
+    csv_error = None
     try:
         rows = list(csv.reader(io.StringIO(text)))
     except csv.Error as e:
-        rows = None
         csv_error = e
 
-    if rows:
+    if rows is not None:
         # Strict parsing succeeded – validate column consistency
         if not rows:
             raise ValueError("The file is empty.")
@@ -81,9 +82,10 @@ def read_reviews(fileobj):
         # Fallback: use pandas with a tolerant parser that skips malformed lines
         try:
             df = pd.read_csv(io.StringIO(text), engine="python", on_bad_lines="skip")
-        except Exception:
+        except Exception as e:
             # If pandas also fails, surface the original csv error
-            raise ValueError(f"CSV parsing error: {csv_error}. Ensure fields with newlines are quoted.")
+            error_msg = str(csv_error or e)
+            raise ValueError(f"CSV parsing error: {error_msg}. Ensure fields with newlines are quoted.")
 
     # Standardize column names
     df.columns = [str(c).strip().lower() for c in df.columns]
