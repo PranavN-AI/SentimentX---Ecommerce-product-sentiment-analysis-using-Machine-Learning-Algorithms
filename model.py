@@ -57,7 +57,13 @@ def stars_to_label(value):
 def read_reviews(fileobj):
     raw = fileobj.read()
     text = raw.decode("utf-8-sig", errors="replace") if isinstance(raw, bytes) else raw
-    rows = list(csv.reader(io.StringIO(text)))
+
+    # Try to parse CSV with proper error handling
+    try:
+        rows = list(csv.reader(io.StringIO(text)))
+    except csv.Error as e:
+        raise ValueError(f"CSV parsing error: {e}. Ensure fields with newlines are quoted.")
+
     if not rows:
         raise ValueError("The file is empty.")
     width = len(rows[0])
@@ -65,7 +71,7 @@ def read_reviews(fileobj):
         if row and len(row) != width:
             raise ValueError(
                 f"Line {line_no} has {len(row)} fields but the header has {width}. "
-                "Put review text that contains commas inside double quotes."
+                "Put review text that contains commas or newlines inside double quotes."
             )
     df = pd.DataFrame(rows[1:], columns=rows[0])
     df.columns = [str(c).strip().lower() for c in df.columns]
