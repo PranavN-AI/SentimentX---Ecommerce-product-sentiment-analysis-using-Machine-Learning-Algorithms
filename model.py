@@ -58,24 +58,37 @@ def read_reviews(fileobj):
     raw = fileobj.read()
     text = raw.decode("utf-8-sig", errors="replace") if isinstance(raw, bytes) else raw
 
-    # Try to parse CSV with proper error handling
+    # Attempt strict CSV parsing first (handles quoted newlines correctly)
     try:
         rows = list(csv.reader(io.StringIO(text)))
     except csv.Error as e:
-        raise ValueError(f"CSV parsing error: {e}. Ensure fields with newlines are quoted.")
+        rows = None
+        csv_error = e
 
-    if not rows:
-        raise ValueError("The file is empty.")
-    width = len(rows[0])
-    for line_no, row in enumerate(rows[1:], start=2):
-        if row and len(row) != width:
-            raise ValueError(
-                f"Line {line_no} has {len(row)} fields but the header has {width}. "
-                "Put review text that contains commas or newlines inside double quotes."
-            )
-    df = pd.DataFrame(rows[1:], columns=rows[0])
+    if rows:
+        # Strict parsing succeeded – validate column consistency
+        if not rows:
+            raise ValueError("The file is empty.")
+        width = len(rows[0])
+        for line_no, row in enumerate(rows[1:], start=2):
+            if row and len(row) != width:
+                raise ValueError(
+                    f"Line {line_no} has {len(row)} fields but the header has {width}. "
+                    "Put review text that contains commas or newlines inside double quotes."
+                )
+        df = pd.DataFrame(rows[1:], columns=rows[0])
+    else:
+        # Fallback: use pandas with a tolerant parser that skips malformed lines
+        try:
+            df = pd.read_csv(io.StringIO(text), engine="python", on_bad_lines="skip")
+        except Exception:
+            # If pandas also fails, surface the original csv error
+            raise ValueError(f"CSV parsing error: {csv_error}. Ensure fields with newlines are quoted.")
+
+    # Standardize column names
     df.columns = [str(c).strip().lower() for c in df.columns]
 
+    # Continue with the rest of the processing (unchanged)
     text_col = next((c for c in TEXT_NAMES if c in df.columns), None)
     if text_col is None:
         text_col = next((c for c in df.columns if df[c].dtype == object and c not in LABEL_NAMES), None)
